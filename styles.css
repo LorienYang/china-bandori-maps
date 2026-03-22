@@ -154,6 +154,14 @@ body {
   margin-bottom: 10px;
 }
 
+#introLogo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 2px 0 10px;
+}
+
 #introCard .card-body {
   font-size: 19px;
   line-height: 1.55;
@@ -896,6 +904,10 @@ body {
 
   #introCard .card-title {
     font-size: 20px;
+  }
+
+  #introLogo {
+    margin-bottom: 8px;
   }
 
   #introCard .card-body {
