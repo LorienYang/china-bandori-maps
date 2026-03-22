@@ -19,6 +19,11 @@
         <p class="card-body gpl-text">
           本软件以 GPLv3 进行开源
         </p>
+        <label class="md3-switch" for="invertCtrlSwitch">
+          <input id="invertCtrlSwitch" type="checkbox" />
+          <span class="md3-switch-track"><span class="md3-switch-thumb"></span></span>
+          <span id="invertCtrlLabel" class="md3-switch-label">反转操作（默认关）</span>
+        </label>
       </section>
 
       <section id="selectedCard" class="md3-card" aria-label="已选择省份">
@@ -38,6 +43,8 @@
           <button id="resetViewBtn" class="md3-btn md3-btn-tonal" type="button">重置</button>
         </div>
       </section>
+
+      <div id="badgeBubble" class="map-bubble" aria-live="polite"></div>
 
       <div id="tooltip"></div>
     </div>

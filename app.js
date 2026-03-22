@@ -12,6 +12,10 @@ let controlsBound = false;
 let copyActionBound = false;
 let selectedCardAnimToken = 0;
 let introToggleBound = false;
+let bubbleActionBound = false;
+let activeBubbleState = null;
+let bubbleAnimToken = 0;
+let invertCtrlBubble = false;
 
 function normalizeProvinceName(name) {
   if (!name) return '';
@@ -78,12 +82,52 @@ function bindCopyAction() {
   copyActionBound = true;
 }
 
+function bindBubbleAction() {
+  if (bubbleActionBound) return;
+  const bubble = document.getElementById('badgeBubble');
+  const mapEl = document.getElementById('map');
+  if (!bubble || !mapEl) return;
+
+  bubble.addEventListener('click', async (event) => {
+    const item = event.target.closest('.map-bubble-item');
+    if (!item) return;
+
+    const encoded = item.getAttribute('data-copy') || '';
+    const text = decodeURIComponent(encoded);
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      const idEl = item.querySelector('.bubble-id');
+      if (!idEl) return;
+      const old = idEl.textContent;
+      idEl.textContent = '已复制';
+      setTimeout(() => {
+        idEl.textContent = old;
+      }, 800);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  mapEl.addEventListener('click', (event) => {
+    const inBubble = event.target.closest('#badgeBubble');
+    const inBadge = event.target.closest('.count-badge');
+    if (inBubble || inBadge) return;
+    hideMapBubble();
+  });
+
+  bubbleActionBound = true;
+}
+
 function bindIntroToggle() {
   if (introToggleBound) return;
 
   const introCard = document.getElementById('introCard');
   const closeBtn = document.getElementById('introCloseBtn');
   const expandBtn = document.getElementById('introExpandBtn');
+  const invertCtrlSwitch = document.getElementById('invertCtrlSwitch');
+  const invertCtrlLabel = document.getElementById('invertCtrlLabel');
   if (!introCard || !closeBtn || !expandBtn) return;
 
   closeBtn.addEventListener('click', () => {
@@ -93,6 +137,18 @@ function bindIntroToggle() {
   expandBtn.addEventListener('click', () => {
     introCard.classList.remove('collapsed');
   });
+
+  if (invertCtrlSwitch) {
+    invertCtrlSwitch.checked = false;
+    if (invertCtrlLabel) invertCtrlLabel.textContent = '反转操作（默认关）';
+
+    invertCtrlSwitch.addEventListener('change', () => {
+      invertCtrlBubble = !!invertCtrlSwitch.checked;
+      if (invertCtrlLabel) {
+        invertCtrlLabel.textContent = invertCtrlBubble ? '反转操作（已开启）' : '反转操作（默认关）';
+      }
+    });
+  }
 
   introToggleBound = true;
 }
@@ -131,6 +187,135 @@ function getProvinceCountByName(name) {
   const key = normalizeProvinceName(name);
   const arr = provinceGroupsMap.get(key) || [];
   return arr.length;
+}
+
+function getProvinceRowsByName(name) {
+  const key = normalizeProvinceName(name);
+  return provinceGroupsMap.get(key) || [];
+}
+
+function hideMapBubble() {
+  const bubble = document.getElementById('badgeBubble');
+  if (!bubble) return;
+  bubble.classList.remove('open');
+  activeBubbleState = null;
+}
+
+function placeMapBubble(anchorX, anchorY) {
+  if (!mapViewState) return;
+  const bubble = document.getElementById('badgeBubble');
+  if (!bubble) return;
+
+  const scale = mapViewState.zoom.scale();
+  const tr = mapViewState.zoom.translate();
+  const px = tr[0] + anchorX * scale;
+  const py = tr[1] + anchorY * scale;
+
+  bubble.style.left = px + 'px';
+  bubble.style.top = py + 'px';
+}
+
+function applyBubbleMarquee() {
+  const nodes = document.querySelectorAll('#badgeBubble .bubble-name');
+  nodes.forEach((el) => {
+    el.classList.remove('marquee');
+    const parent = el.parentElement;
+    if (!parent) return;
+    if (el.scrollWidth > parent.clientWidth + 4) {
+      el.classList.add('marquee');
+    }
+  });
+}
+
+function animateMapBubbleResize(updateFn) {
+  const bubble = document.getElementById('badgeBubble');
+  if (!bubble) {
+    updateFn();
+    return;
+  }
+
+  bubbleAnimToken += 1;
+  const myToken = bubbleAnimToken;
+  const startRect = bubble.getBoundingClientRect();
+
+  if (bubble.classList.contains('open')) {
+    bubble.style.width = startRect.width + 'px';
+    bubble.style.height = startRect.height + 'px';
+  }
+
+  updateFn();
+
+  bubble.style.width = 'auto';
+  bubble.style.height = 'auto';
+  const targetRect = bubble.getBoundingClientRect();
+
+  if (bubble.classList.contains('open')) {
+    bubble.style.width = startRect.width + 'px';
+    bubble.style.height = startRect.height + 'px';
+    void bubble.offsetHeight;
+
+    requestAnimationFrame(() => {
+      if (myToken !== bubbleAnimToken) return;
+      bubble.style.width = targetRect.width + 'px';
+      bubble.style.height = targetRect.height + 'px';
+    });
+
+    const clear = () => {
+      if (myToken !== bubbleAnimToken) return;
+      bubble.style.width = '';
+      bubble.style.height = '';
+      bubble.removeEventListener('transitionend', clear);
+    };
+    bubble.addEventListener('transitionend', clear);
+    setTimeout(clear, 420);
+  }
+}
+
+function showMapBubbleByProvince(provinceName, anchorX, anchorY) {
+  const bubble = document.getElementById('badgeBubble');
+  if (!bubble) return;
+
+  const rows = getProvinceRowsByName(provinceName);
+  if (!rows.length) {
+    hideMapBubble();
+    return;
+  }
+
+  const limited = rows.slice(0, 12);
+  animateMapBubbleResize(() => {
+    bubble.innerHTML = `
+      <div class="map-bubble-scroll">
+        <h3 class="map-bubble-title">${escapeHTML(provinceName)} · ${rows.length} 个群</h3>
+        ${limited
+          .map((item) => {
+            const name = escapeHTML(item.name || '未命名群');
+            const idText = escapeHTML(String(item.info || '无群号'));
+            const copyText = encodeURIComponent(String(item.info || ''));
+            return `
+              <article class="map-bubble-item" data-copy="${copyText}" title="点击复制群号">
+                <div class="bubble-name-wrap">
+                  <span class="bubble-name">${name}</span>
+                </div>
+                <div class="bubble-id">${idText}</div>
+              </article>
+            `;
+          })
+          .join('')}
+      </div>
+    `;
+  });
+
+  activeBubbleState = {
+    provinceName,
+    anchorX,
+    anchorY
+  };
+
+  placeMapBubble(anchorX, anchorY);
+  requestAnimationFrame(() => {
+    bubble.classList.add('open');
+    applyBubbleMarquee();
+  });
 }
 
 function animateSelectedCardUpdate(updateFn) {
@@ -319,6 +504,7 @@ function bindControlEvents() {
     overseasToggleBtn.addEventListener('click', () => {
       selectedProvinceKey = '海外';
       showProvinceDetails('海外');
+      hideMapBubble();
       if (mapViewState && mapViewState.g) {
         mapViewState.g.selectAll('.province').classed('selected', false);
       }
@@ -451,13 +637,40 @@ function renderChinaMap() {
 
     const r = count > 99 ? 13 : 11;
 
-    const badge = badgeLayer.append('g').attr('class', 'count-badge').attr('transform', 'translate(' + cx + ',' + cy + ')');
+    const badge = badgeLayer
+      .append('g')
+      .attr('class', 'count-badge')
+      .attr('data-province-id', d.id)
+      .attr('data-province-name', d.name)
+      .attr('transform', 'translate(' + cx + ',' + cy + ')');
     badge.append('circle').attr('r', r);
     badge
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
       .text(count > 99 ? '99+' : String(count));
+
+    badge.on('click', function () {
+      const evt = d3.event;
+      if (!evt) return;
+      evt.stopPropagation();
+
+      const shouldShowBubble = invertCtrlBubble ? !!evt.ctrlKey : !evt.ctrlKey;
+
+      // 穿透：按省份点击处理，不弹气泡
+      if (!shouldShowBubble) {
+        selectedProvinceKey = normalizeProvinceName(d.name);
+        g.selectAll('.province').classed('selected', false);
+        const provincePath = g.select('#' + d.id);
+        if (!provincePath.empty()) provincePath.classed('selected', true);
+        showProvinceDetails(d.name);
+        hideMapBubble();
+        return;
+      }
+
+      // 显示气泡：仅弹出气泡，不触发省份选中态
+      showMapBubbleByProvince(d.name, cx, cy);
+    });
   });
 
   g.selectAll('.province').on('click', function (d) {
@@ -465,6 +678,7 @@ function renderChinaMap() {
     g.selectAll('.province').classed('selected', false);
     d3.select(this).classed('selected', true);
     showProvinceDetails(d.name);
+    hideMapBubble();
   });
 
   if (selectedProvinceKey) {
@@ -489,6 +703,10 @@ function renderChinaMap() {
         'transform',
         'translate(' + d3.event.translate[0] + ',' + d3.event.translate[1] + ') scale(' + d3.event.scale + ')'
       );
+
+      if (activeBubbleState) {
+        placeMapBubble(activeBubbleState.anchorX, activeBubbleState.anchorY);
+      }
     });
 
   svg.call(zoom).on('dblclick.zoom', null);
@@ -506,6 +724,11 @@ function renderChinaMap() {
   };
 
   bindControlEvents();
+  bindBubbleAction();
+
+  if (activeBubbleState) {
+    placeMapBubble(activeBubbleState.anchorX, activeBubbleState.anchorY);
+  }
 }
 
 async function init() {
