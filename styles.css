@@ -77,7 +77,7 @@ html, body {
   margin: 0;
   overflow: hidden;
   background: radial-gradient(circle at 20% 20%, var(--md-surface-container), var(--md-surface));
-  font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  font-family: "Noto Sans SC", "Noto Sans CJK SC", "Noto Sans CJK", sans-serif;
   color: var(--md-on-surface);
 }
 
