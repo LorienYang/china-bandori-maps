@@ -57,9 +57,9 @@ const Utils = {
     return String(name).trim().replace(/(壮族自治区|回族自治区|维吾尔自治区|特别行政区|自治区|省|市)$/g, '');
   },
 
-  groupTypeText: (type) => ({ school: '校群', region: '地区' }[type] || '其他'),
+  groupTypeText: (type) => ({ school: '校群', region: '地区', 'non-regional': '非地区' }[type] || '其他'),
   
-  typeFilterValue: (type) => ({ school: 'school', region: 'region' }[type] || 'other'),
+  typeFilterValue: (type) => ({ school: 'school', region: 'region', 'non-regional': 'non-regional' }[type] || 'other'),
 
   formatCreatedAt: (value) => {
     if (!value) return '建群时间未知';
@@ -96,12 +96,18 @@ function applyMobileModeLayout() {
   };
   if (!els.map || !els.selectedCard || !els.overseasBtn || !els.controlCard || !els.introCard || !els.sheetHandle) return;
 
+  const nonRegionalBtn = document.getElementById('nonRegionalToggleBtn');
+
   if (Utils.isMobileViewport()) {
     if (els.overseasBtn.parentElement !== els.selectedCard || els.sheetHandle.parentElement !== els.selectedCard) {
       els.selectedCard.insertBefore(els.sheetHandle, els.selectedCard.firstChild);
       els.selectedCard.insertBefore(els.overseasBtn, els.sheetHandle.nextSibling);
+      if (nonRegionalBtn) {
+        els.selectedCard.insertBefore(nonRegionalBtn, els.overseasBtn.nextSibling);
+      }
     }
     els.overseasBtn.classList.add('mobile-inside');
+    nonRegionalBtn?.classList.add('mobile-inside');
     els.controlCard.classList.add('mobile-hidden');
     els.introCard.classList.add('collapsed');
 
@@ -114,10 +120,14 @@ function applyMobileModeLayout() {
     if (els.overseasBtn.parentElement !== els.map) {
       els.map.insertBefore(els.overseasBtn, els.controlCard);
     }
+    if (nonRegionalBtn && nonRegionalBtn.parentElement !== els.map) {
+      els.map.insertBefore(nonRegionalBtn, els.controlCard);
+    }
     if (els.sheetHandle.parentElement !== els.map) {
       els.map.insertBefore(els.sheetHandle, els.controlCard);
     }
     els.overseasBtn.classList.remove('mobile-inside');
+    nonRegionalBtn?.classList.remove('mobile-inside');
     els.controlCard.classList.remove('mobile-hidden');
     els.selectedCard.style.height = '';
   }
@@ -416,11 +426,13 @@ function updateSummaryUI(source, animate = true) {
 function showProvinceDetails(provinceName) {
   const key = Utils.normalizeProvinceName(provinceName);
   State.currentDetailProvinceName = provinceName;
-  State.currentDetailRows = State.provinceGroupsMap.get(key) || [];
+  State.currentDetailRows = key === '非地区' ? (State.provinceGroupsMap.get('__non_regional__') || []) : (State.provinceGroupsMap.get(key) || []);
   renderCurrentDetail();
 
-  const btn = document.getElementById('overseasToggleBtn');
-  if (btn) btn.classList.toggle('active', key === '海外');
+  const overseasBtn = document.getElementById('overseasToggleBtn');
+  const nonRegionalBtn = document.getElementById('nonRegionalToggleBtn');
+  if (overseasBtn) overseasBtn.classList.toggle('active', key === '海外');
+  if (nonRegionalBtn) nonRegionalBtn.classList.toggle('active', key === '非地区');
 }
 
 // ==========================================
@@ -742,7 +754,9 @@ async function reloadBandoriData() {
   State.provinceGroupsMap = new Map();
   
   rows.forEach(item => {
-    const key = Utils.normalizeProvinceName(item.province);
+    const key = item.type === 'non-regional'
+      ? '__non_regional__'
+      : Utils.normalizeProvinceName(item.province);
     if (!key) return;
     if (!State.provinceGroupsMap.has(key)) State.provinceGroupsMap.set(key, []);
     State.provinceGroupsMap.get(key).push(item);
@@ -832,6 +846,14 @@ function bindAllStaticEvents() {
     setGlobalSearchEnabled(false);
     State.selectedProvinceKey = '海外';
     showProvinceDetails('海外');
+    hideMapBubble();
+    State.mapViewState?.g.selectAll('.province').classed('selected', false);
+  });
+
+  document.getElementById('nonRegionalToggleBtn')?.addEventListener('click', () => {
+    setGlobalSearchEnabled(false);
+    State.selectedProvinceKey = '非地区';
+    showProvinceDetails('非地区');
     hideMapBubble();
     State.mapViewState?.g.selectAll('.province').classed('selected', false);
   });

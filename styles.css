@@ -498,6 +498,10 @@ body {
   border: 1px solid rgba(179, 33, 102, 0.25);
 }
 
+.secondary-toggle-btn {
+  top: 74px;
+}
+
 .side-toggle-btn.active {
   color: #ffffff;
   background: var(--md-primary);
@@ -1164,6 +1168,11 @@ body {
     top: auto;
     min-width: 68px;
     height: 42px;
+  }
+
+  .secondary-toggle-btn {
+    bottom: calc(46vh + 64px);
+    top: auto;
   }
 
   .side-toggle-btn.mobile-inside {
