@@ -114,8 +114,9 @@
 
     els.calendarEventList.innerHTML = dayEvents
       .map((item, index) => {
+        const official = Number(item.offical) === 1;
         return `
-          <button class="calendar-event-item" type="button" data-index="${index}" data-date="${dateKey}">
+          <button class="calendar-event-item ${official ? 'official' : ''}" type="button" data-index="${index}" data-date="${dateKey}">
             <div class="calendar-event-date">${dateKey}</div>
             <div class="calendar-event-name">${item.event || '未命名活动'}</div>
             <div class="calendar-event-text">${item.raw_text || ''}</div>
@@ -155,11 +156,19 @@
       const date = new Date(year, month, day);
       const key = formatDateKey(date);
       const events = eventMap.get(key) || [];
+      const officialCount = events.filter((item) => Number(item.offical) === 1).length;
+      const normalCount = events.length - officialCount;
       const selected = state.selectedDateKey === key ? 'selected' : '';
+      const dotsHtml = (normalCount > 0 || officialCount > 0)
+        ? `<span class="calendar-dot-row">
+             ${normalCount > 0 ? `<span class="calendar-dot">${normalCount}</span>` : ''}
+             ${officialCount > 0 ? `<span class="calendar-dot official-dot">${officialCount}</span>` : ''}
+           </span>`
+        : '';
       cells.push(`
         <button class="calendar-cell ${events.length ? 'has-event' : ''} ${selected}" type="button" data-date="${key}">
           <span class="calendar-day">${day}</span>
-          ${events.length ? `<span class="calendar-dot">${events.length}</span>` : ''}
+          ${dotsHtml}
         </button>
       `);
     }

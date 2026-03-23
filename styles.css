@@ -613,10 +613,8 @@ body {
 .calendar-cell {
   min-height: 58px;
   border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  justify-items: center;
 }
 
 .calendar-weekday {
@@ -639,6 +637,21 @@ body {
 .calendar-cell.has-event {
   background: #fff1f7;
   border-color: rgba(179, 33, 102, 0.32);
+  grid-template-rows: 1fr auto;
+  padding-top: 10px;
+}
+
+.calendar-cell:not(.has-event) {
+  place-items: center;
+}
+
+.calendar-dot-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  align-self: end;
+  margin-bottom: 6px;
 }
 
 .calendar-cell.selected {
@@ -648,13 +661,13 @@ body {
 }
 
 .calendar-day {
+  align-self: center;
   font-size: 16px;
   font-weight: 700;
   color: #6f1d44;
 }
 
 .calendar-dot {
-  margin-top: 6px;
   min-width: 22px;
   padding: 3px 6px;
   border-radius: 999px;
@@ -662,6 +675,10 @@ body {
   color: #fff;
   font-size: 11px;
   line-height: 1;
+}
+
+.official-dot {
+  background: #4b7dff;
 }
 
 .calendar-event-list {
@@ -677,6 +694,11 @@ body {
   background: #fff5fa;
   padding: 12px 14px;
   cursor: pointer;
+}
+
+.calendar-event-item.official {
+  background: #fff6cc;
+  border-color: rgba(196, 156, 0, 0.28);
 }
 
 .calendar-event-date {
