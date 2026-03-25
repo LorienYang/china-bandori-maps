@@ -492,10 +492,9 @@ function placeMapBubble(anchorX, anchorY) {
   const bubble = document.getElementById('badgeBubble');
   if (!bubble) return;
 
-  const scale = State.mapViewState.zoom.scale();
-  const tr = State.mapViewState.zoom.translate();
-  bubble.style.left = `${tr[0] + anchorX * scale}px`;
-  bubble.style.top = `${tr[1] + anchorY * scale}px`;
+  const transform = d3.zoomTransform(State.mapViewState.svg.node());
+  bubble.style.left = `${transform.x + anchorX * transform.k}px`;
+  bubble.style.top = `${transform.y + anchorY * transform.k}px`;
 }
 
 function showMapBubbleByProvince(provinceName, anchorX, anchorY) {
@@ -651,9 +650,9 @@ function renderChinaMap() {
     badge.append('circle').attr('r', count > 99 ? 13 : 11);
     badge.append('text').attr('text-anchor', 'middle').attr('dy', '0.35em').text(count > 99 ? '99+' : count);
 
-    badge.on('click', () => {
-      d3.event?.stopPropagation();
-      const shouldShowBubble = State.invertCtrlBubble ? !!d3.event.ctrlKey : !d3.event.ctrlKey;
+    badge.on('click', (event) => {
+      event.stopPropagation();
+      const shouldShowBubble = State.invertCtrlBubble ? !!event.ctrlKey : !event.ctrlKey;
       
       if (!shouldShowBubble) {
         setGlobalSearchEnabled(false);
@@ -667,7 +666,7 @@ function renderChinaMap() {
     });
   });
 
-  g.selectAll('.province').on('click', function (d) {
+  g.selectAll('.province').on('click', function (event, d) {
     setGlobalSearchEnabled(false);
     State.selectedProvinceKey = Utils.normalizeProvinceName(d.name);
     g.selectAll('.province').classed('selected', false);
@@ -680,14 +679,14 @@ function renderChinaMap() {
     g.selectAll('.province').classed('selected', d => Utils.normalizeProvinceName(d.name) === State.selectedProvinceKey);
   }
 
-  const zoom = d3.behavior.zoom().scaleExtent([fitScale, fitScale * 12]).translate([offsetX, offsetY]).scale(fitScale)
-    .on('zoom', () => {
-      g.attr('transform', `translate(${d3.event.translate[0]},${d3.event.translate[1]}) scale(${d3.event.scale})`);
+  const zoom = d3.zoom().scaleExtent([fitScale, fitScale * 12])
+    .on('zoom', (event) => {
+      g.attr('transform', event.transform);
       if (State.activeBubbleState) placeMapBubble(State.activeBubbleState.anchorX, State.activeBubbleState.anchorY);
     });
 
   svg.call(zoom).on('dblclick.zoom', null);
-  g.attr('transform', `translate(${offsetX},${offsetY}) scale(${fitScale})`);
+  svg.call(zoom.transform, d3.zoomIdentity.translate(offsetX, offsetY).scale(fitScale));
 
   State.mapViewState = { svg, g, zoom, width: w, height: h, minScale: fitScale, maxScale: fitScale * 12, baseScale: fitScale, baseTranslate: [offsetX, offsetY] };
   if (State.activeBubbleState) placeMapBubble(State.activeBubbleState.anchorX, State.activeBubbleState.anchorY);
@@ -817,12 +816,17 @@ function bindAllStaticEvents() {
   // 3. 地图控制与重置视图
   const stepScale = (factor) => {
     if (!State.mapViewState) return;
-    const { svg, g, zoom, minScale, maxScale, width, height } = State.mapViewState;
-    const current = zoom.scale(), next = Math.max(minScale, Math.min(maxScale, current * factor));
-    const t = zoom.translate(), k = next / current, nextT = [width / 2 - (width / 2 - t[0]) * k, height / 2 - (height / 2 - t[1]) * k];
-    zoom.scale(next).translate(nextT);
-    g.attr('transform', `translate(${nextT[0]},${nextT[1]}) scale(${next})`);
-    svg.call(zoom);
+    const { svg, zoom, minScale, maxScale, width, height } = State.mapViewState;
+    const currentTransform = d3.zoomTransform(svg.node());
+    const nextScale = Math.max(minScale, Math.min(maxScale, currentTransform.k * factor));
+    const center = [width / 2, height / 2];
+    const nextTransform = d3.zoomIdentity
+      .translate(currentTransform.x, currentTransform.y)
+      .scale(currentTransform.k)
+      .translate(center[0], center[1])
+      .scale(nextScale / currentTransform.k)
+      .translate(-center[0], -center[1]);
+    svg.call(zoom.transform, nextTransform);
   };
 
   document.getElementById('zoomInBtn')?.addEventListener('click', () => stepScale(1.2));
@@ -844,10 +848,8 @@ function bindAllStaticEvents() {
     }
 
     if (State.mapViewState) {
-      const { svg, g, zoom, baseScale, baseTranslate } = State.mapViewState;
-      zoom.scale(baseScale).translate([...baseTranslate]);
-      g.attr('transform', `translate(${baseTranslate[0]},${baseTranslate[1]}) scale(${baseScale})`);
-      svg.call(zoom);
+      const { svg, zoom, baseScale, baseTranslate } = State.mapViewState;
+      svg.call(zoom.transform, d3.zoomIdentity.translate(baseTranslate[0], baseTranslate[1]).scale(baseScale));
     }
   });
 
