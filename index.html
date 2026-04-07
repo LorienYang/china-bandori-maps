@@ -20,6 +20,12 @@
     <meta name="format-detection" content="telephone=no,email=no,address=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdmirror.com" crossorigin />
+    <link rel="preconnect" href="https://mapapi.enldm.cyou" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdmirror.com" />
+    <link rel="dns-prefetch" href="https://mapapi.enldm.cyou" />
+    <link rel="dns-prefetch" href="https://count.getloli.com" />
+    <link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
@@ -144,6 +150,7 @@
           id="introCounter"
           src="https://count.getloli.com/get/@HELPMEEADICE-Bandori-Web"
           alt="访问计数器"
+          loading="lazy"
         />
       </section>
 
@@ -199,7 +206,7 @@
       <div id="feedbackModal" class="feedback-modal" aria-hidden="true">
         <div class="feedback-modal-card" role="dialog" aria-modal="true" aria-label="反馈群二维码">
           <button id="feedbackModalClose" class="feedback-modal-close" type="button" aria-label="关闭">×</button>
-          <img src="./qrcode.webp" alt="反馈群二维码" class="feedback-modal-image" />
+          <img src="./qrcode.webp" alt="反馈群二维码" class="feedback-modal-image" loading="lazy" />
           <a
             href="https://qm.qq.com/q/j1lqVJcjNC"
             target="_blank"
@@ -239,7 +246,7 @@
           <button id="eventPosterClose" class="event-poster-close" type="button" aria-label="关闭">×</button>
           <div class="event-poster-scroll">
             <h3 id="eventPosterTitle" class="event-poster-title"></h3>
-            <img id="eventPosterImage" class="event-poster-image" alt="活动宣传图" />
+            <img id="eventPosterImage" class="event-poster-image" alt="活动宣传图" loading="lazy" />
             <p id="eventPosterText" class="event-poster-text"></p>
           </div>
         </div>
